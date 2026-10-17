@@ -347,7 +347,9 @@ def fetch_youtube_creators() -> list[SignalItem]:
     channels = [
         ("Cloud Codes", "UC0DZj1PNa_Fp0MU6uPSKv5w", True),
         ("The Stack ai", "UCjete_rlEo4zKvkzJNCMzsA", True),
+        ("InsiderForce", "UC8L6EV01fAJ2A0sDpsQ-T5g", True),
         ("Cole Medin", "UCMwVTLZIRRUyyVrkjDpn4pA", False),
+        ("Simon Scrapes", "UCdCR4-uYOg5ju-IUuDnfnQA", False),
         ("IndyDevDan", "UC_x36zCEGilGpB1m-V4gmjg", False),
         ("AI Explained", "UCNJ1Ymd5yFuUPtn21xtRbbw", False),
         ("Anthropic", "UCrDwWp7EBBv4NwvScIpBDOA", False),

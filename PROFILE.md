@@ -30,7 +30,7 @@ Data platform: **Per-source native free APIs, RSS/Atom feeds, HTML/Markdown chan
 | `lab-models` | Newest model repos from Meta, Mistral, Google, Qwen, DeepSeek, Z.ai, Moonshot, OpenAI, NVIDIA, Microsoft | HuggingFace `/api/models?author=<org>&sort=createdAt` | Day-0 model launches to test head-to-head (Muse Spark was missed before this source) |
 | `hacker-news` | Hacker News AI, agent, MCP, LLM, ElevenLabs, Cursor stories | HN Algolia API (`search_by_date`, `points>=5`) | Early technical discussions and Show HN launches |
 | `reddit` | `r/ClaudeAI`, `r/ClaudeCode`, `r/LocalLLaMA`, `r/ChatGPTCoding`, `r/mcp`, `r/google_antigravity`, `r/cursor`, `r/GeminiAI`, `r/elevenlabs`, `r/ollama` | Top-of-day RSS with 2.2s rate-limit spacing & per-subreddit percentile | Community workarounds, token/limit findings, and niche sub signal |
-| `youtube-creators` | Competitors (**Cloud Codes**, **The Stack ai**), Creators (Cole Medin, IndyDevDan, AI Explained, Sam Witteveen, Developers Digest, Fireship), First-Party (Anthropic, DeepMind, Google Dev, Creator Insider, vidIQ) | YouTube native channel RSS feeds | Competitor topic radar + creator policy updates |
+| `youtube-creators` | Competitors (**Cloud Codes**, **The Stack ai**, **InsiderForce**), Creators (Cole Medin, Simon Scrapes, IndyDevDan, AI Explained, Sam Witteveen, Developers Digest, Fireship), First-Party (Anthropic, DeepMind, Google Dev, Creator Insider, vidIQ) | YouTube native channel RSS feeds | Competitor topic radar + creator policy updates |
 
 ## Code filters
 
