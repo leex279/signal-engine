@@ -47,16 +47,21 @@ NEW_CRITERIA = {
 }
 
 VIDEO_CANDIDATE_INSTRUCTIONS = (
-    "Could this item be a strong YouTube Short or Long video topic for 'DIY Smart Code' "
-    "(which covers hidden Claude Code / Gemini / agent flags & tricks, cost/usage-limit survival tactics, "
-    "two-camp tool debates like X vs Y, viral agent skills/repos, and local LLM hardware reality checks)?"
+    "Would this item make a strong YouTube Short or Long video for 'DIY Smart Code' (developers, hobbyists and small "
+    "businesses; Windows PC with an AMD 7900 XTX; Claude Code power user)? The channel's proven winners are: "
+    "(1) money / usage-limit / pricing / plan changes that cost the viewer something, "
+    "(2) new model launches the channel can test itself against a rival, "
+    "(3) X vs Y debates with two named camps, "
+    "(4) hidden flags / env-vars / settings / docs tricks most people do not know, "
+    "(5) a brand-new viral repo, skill or language that can be run and tested on a Windows machine. "
+    "Plain version bumps, bugfix releases and internal refactors are NOT video topics."
 )
 
 VIDEO_CANDIDATE_CRITERIA = [
-    "Level 0: Not a video topic (internal patch, minor bugfix, or generic industry news).",
-    "Level 1: Minor update or background item — useful for my own repo maintenance, not a standalone video.",
-    "Level 2: Solid standalone Short or Long video topic — a new model release, viral agent repo/skill, or notable workflow change viewers can run.",
-    "Level 3: High-conviction video hit — reveals a hidden CLI flag/env-var/hook trick not widely known, a cost/usage-limit/loss angle, a sharp X vs Y debate angle, or a local GPU/hardware benchmark.",
+    "Level 0: Not a video topic (patch/bugfix release, internal refactor, generic industry or funding news, opinion).",
+    "Level 1: Useful for my own repo maintenance or a one-line mention only; no standalone video (routine version bump, minor feature).",
+    "Level 2: Solid video topic with one proven hook: a notable new model launch, a new repo/skill/tool that can be tested, or a notable workflow change viewers can run.",
+    "Level 3: High-conviction hit: a pricing / usage-limit / credits / plan change that affects what viewers pay, a hidden flag or env-var trick that is not widely known, a sharp X vs Y debate with two named camps, or a major model launch to test head-to-head. Requires datacenter-only hardware to be excluded (viewers cannot run it).",
 ]
 
 

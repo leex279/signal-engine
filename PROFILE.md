@@ -25,7 +25,9 @@ Data platform: **Per-source native free APIs, RSS/Atom feeds, HTML/Markdown chan
 | `ollama` | `ollama/ollama` + `ggml-org/llama.cpp` & `whisper.cpp` (filtered to ROCm, Vulkan, and new model architectures) | GitHub Releases API + regex pre-filter | Local LLM runner & 7900 XTX GPU support |
 | `github-viral-repos` | Newly created viral repos (`created:>7d stars:>150`) in `claude-code`, `mcp`, `claude skills`, `coding agent`, `llm` | GitHub Search Repositories API | Early detection of breakout agent repos (like `understand-anything`, Karpathy wiki) |
 | `model-radar` | OpenRouter `/api/v1/models` daily diff + HuggingFace `/api/models?sort=trendingScore` | OpenRouter & HuggingFace JSON APIs | Day-0 detection of new model IDs and trending open-weight launches (Gemma, Qwen, GLM, Kimi) |
-| `official-blogs` | Anthropic Engineering, Claude Blog, OpenAI Developer Changelog, Simon Willison, YouTube Official Blog | RSS / Atom feeds | Engineering deep-dives & YouTube creator policy shifts |
+| `official-blogs` | Anthropic Engineering, Anthropic News, Claude Blog, OpenAI Developer Changelog, Ollama Blog, Simon Willison, YouTube Official Blog | RSS / Atom feeds | Engineering deep-dives, Anthropic announcements & YouTube creator policy shifts |
+| `claude-apps` | Claude desktop / Cowork / Chrome / plugins / plan & credit release notes (`support.claude.com`) | HTML splitter by dated heading | 5 of the last 10 videos were Claude app/Cowork topics; money/credit changes are the channel's top format |
+| `lab-models` | Newest model repos from Meta, Mistral, Google, Qwen, DeepSeek, Z.ai, Moonshot, OpenAI, NVIDIA, Microsoft | HuggingFace `/api/models?author=<org>&sort=createdAt` | Day-0 model launches to test head-to-head (Muse Spark was missed before this source) |
 | `hacker-news` | Hacker News AI, agent, MCP, LLM, ElevenLabs, Cursor stories | HN Algolia API (`search_by_date`, `points>=5`) | Early technical discussions and Show HN launches |
 | `reddit` | `r/ClaudeAI`, `r/ClaudeCode`, `r/LocalLLaMA`, `r/ChatGPTCoding`, `r/mcp`, `r/google_antigravity`, `r/cursor`, `r/GeminiAI`, `r/elevenlabs`, `r/ollama` | Top-of-day RSS with 2.2s rate-limit spacing & per-subreddit percentile | Community workarounds, token/limit findings, and niche sub signal |
 | `youtube-creators` | Competitors (**Cloud Codes**, **The Stack ai**), Creators (Cole Medin, IndyDevDan, AI Explained, Sam Witteveen, Developers Digest, Fireship), First-Party (Anthropic, DeepMind, Google Dev, Creator Insider, vidIQ) | YouTube native channel RSS feeds | Competitor topic radar + creator policy updates |
@@ -50,11 +52,11 @@ Data platform: **Per-source native free APIs, RSS/Atom feeds, HTML/Markdown chan
    - `true`: Announces or documents a concrete release, changelog entry, feature, developer tool/repo/skill, measured benchmark, model launch, or reproducible workflow.
    - `false`: Opinion essay, vague praise, subjective complaint, end-user game/art showcase, hype thread, or rumor.
 
-3. **Video candidate (`score` 0–3):**
-   - `0`: Not a video topic.
-   - `1`: Useful for repo maintenance only, not a standalone video.
-   - `2`: Solid standalone Short or Long topic (new model release, viral agent repo/skill, or notable workflow change).
-   - `3`: High-conviction DIY Smart Code hit — hidden CLI flag/env-var/hook trick, cost/usage-limit survival tactic, sharp X vs Y debate angle, or local GPU hardware benchmark.
+3. **Video candidate (`score` 0–3)** - scored against the channel's *measured* winners (credit-split 187K, Gemma 52K/46K, HTML vs Markdown 37K, Vercel language 27K, AI Ultra pricing 23K, Fable 5 launch 22K, Understand Anything 19K). Plain version bumps cap near 6K.
+   - `0`: Not a video topic (patch/bugfix, internal refactor, generic industry/funding news, opinion).
+   - `1`: Repo maintenance or a one-line mention only (routine version bump, minor feature).
+   - `2`: Solid topic with one proven hook: notable model launch, testable new repo/skill/tool, notable workflow change.
+   - `3`: High-conviction hit: pricing / usage-limit / credits / plan change that costs viewers money, an unknown hidden flag/env-var/docs trick, a sharp X vs Y debate with two named camps, or a major model launch to test head-to-head. Datacenter-only hardware never qualifies as a "run it yourself" video.
 
 Routing: **drop** when `relevance < 0.4` OR `new <= 0.1`; **keep** when `relevance >= 0.5` AND `new >= 0.6`; **unsure** for everything else.
 
@@ -75,7 +77,15 @@ Routing: **drop** when `relevance < 0.4` OR `new <= 0.1`; **keep** when `relevan
 - **Where I read it:**
   1. `digests/YYYY-MM-DD.md` in the repo
   2. `D:\Nextcloud\Obsidian\sync\smartcode\Videos\_signals\YYYY-MM-DD.md` in Obsidian (with `[[wikilinks]]` to matching video catalog slugs)
-- **Length cap & Quotas:** Max 10 main items (`Releases & Changelogs` + `Agent Workflows, Repos & Models`), max 2 bullets per repo (collapsing consecutive versions), at least 3 slots reserved for workflows/repos/models, plus up to 4 **Video Candidates** and an **Action for my repo** header.
+- **Purpose:** decide what video to make next. Repo maintenance is secondary.
+- **Order & caps:**
+  1. **Top Video Picks** - 3 to 5, ranked, never padded. Each has a hook line, format (Short / Long / Debate Long), the proof to capture on my own machine, why now, and dedup/competitor status.
+  2. **Stack updates** - max 4, one per tool, only what changes how I work or make videos (flags, env-vars, breaking changes, limit/outage changes). Version bumps are skipped.
+  3. **Action for my repo** - HyperFrames pin drift and breaking changes (omitted if empty).
+  4. **Already covered / skipped** - one line of `[[slug]]` topics that were in the news but are already on the channel.
+  5. **Also seen** - max 5 one-liners.
+- **Ranking inputs:** the model sees my real top videos by views (from `catalog.json`) and ranks new topics against those patterns.
+- **Hardware truth:** Windows PC, AMD 7900 XTX (ROCm). Never Mac. Datacenter-only tech is framed as "what it means for you", never "run it yourself".
 
 ## Schedule
 

@@ -36,6 +36,8 @@ STOPWORDS = {
     "release", "Added", "added", "fix", "feat", "show", "reddit", "youtube",
 }
 
+SLUG_NOISE = {"short", "shorts", "long", "explained", "tutorial", "demo", "test", "vs", "v2", "v3", "part", "series", "full"}
+
 BREAKING_RE = re.compile(
     r"\b(deprecat\w*|removed|breaking|renamed|incompatible|migration\s+required)\b",
     re.IGNORECASE,
@@ -118,6 +120,15 @@ class CatalogMatcher:
             if score > best_score:
                 best_score = score
                 best_entry = entry
+
+        # Slug-name match: every distinctive word of a video slug (e.g. reflection-beam-short) appears in the item.
+        if best_score < 0.55:
+            item_text_tokens = _tokenize(f"{item.title} {(item.body or '')[:600]}")
+            for entry in self.entries:
+                slug_tokens = _tokenize(entry["slug"].replace("-", " ")) - SLUG_NOISE
+                if len(slug_tokens) >= 2 and slug_tokens <= item_text_tokens:
+                    best_entry, best_score = entry, 0.9
+                    break
 
         if best_entry and best_score >= 0.55:
             slug = best_entry["slug"]

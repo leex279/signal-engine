@@ -21,6 +21,8 @@ CHANGELOG_SOURCES = {
     "ollama",
     "github-viral-repos",
     "model-radar",
+    "claude-apps",
+    "lab-models",
 }
 
 

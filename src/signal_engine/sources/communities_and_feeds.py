@@ -52,6 +52,14 @@ def fetch_official_blogs() -> list[SignalItem]:
             "OpenAI Developer Changelog",
             "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_openai_developer.xml",
         ),
+        (
+            "Anthropic News",
+            "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
+        ),
+        (
+            "Ollama Blog",
+            "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_ollama.xml",
+        ),
         ("Simon Willison", "https://simonwillison.net/atom/everything/"),
         ("YouTube Official Blog", "https://blog.youtube/rss/"),
     ]
@@ -393,6 +401,109 @@ def fetch_youtube_creators() -> list[SignalItem]:
                                 "is_competitor": is_competitor,
                                 "repo": f"yt:{creator}",
                             },
+                        )
+                    )
+            except Exception:
+                continue
+    return items
+
+
+CLAUDE_RELEASE_NOTES_URL = "https://support.claude.com/en/articles/12138966-release-notes"
+
+
+def fetch_claude_apps() -> list[SignalItem]:
+    """Claude app release notes (Claude desktop, Cowork, Chrome, plugins, plans/credits) from support.claude.com."""
+    items: list[SignalItem] = []
+    try:
+        with httpx.Client(timeout=30.0, follow_redirects=True) as client:
+            resp = client.get(CLAUDE_RELEASE_NOTES_URL, headers={"User-Agent": "signal-engine/0.3.0"})
+            resp.raise_for_status()
+    except Exception:
+        return items
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    root = soup.find("article") or soup
+    current: list | None = None
+    entries: list[tuple[str, list[str]]] = []
+    for el in root.find_all(["h2", "h3", "p", "li"]):
+        if el.name == "h3":
+            current = []
+            entries.append((el.get_text(" ", strip=True), current))
+        elif el.name == "h2":
+            current = None
+        elif current is not None and el.find_parent("li") is None:
+            current.append(el.get_text(" ", strip=True))
+
+    for date_text, paras in entries[:6]:
+        pub_dt = _parse_dt(date_text)
+        body = " ".join(paras).strip()
+        if not body:
+            continue
+        # The first paragraph usually starts with the feature headline; use it as the title.
+        title = paras[0][:110] if paras else date_text
+        uid = hashlib.sha256(f"{date_text}|{body[:200]}".encode("utf-8")).hexdigest()[:16]
+        items.append(
+            SignalItem(
+                id=f"claude-apps:{uid}",
+                source="claude-apps",
+                title=f"[Claude apps {date_text}] {title}",
+                url=f"{CLAUDE_RELEASE_NOTES_URL}",
+                body=body[:3000],
+                published_at=pub_dt,
+                metadata={"repo": "Claude apps"},
+            )
+        )
+    return items
+
+
+# Labs whose new open-weight / model repos are day-0 video material for the channel.
+LAB_HF_ORGS = [
+    "meta-llama",
+    "facebook",
+    "mistralai",
+    "google",
+    "Qwen",
+    "deepseek-ai",
+    "zai-org",
+    "moonshotai",
+    "openai",
+    "nvidia",
+    "microsoft",
+]
+
+
+def fetch_lab_models() -> list[SignalItem]:
+    """Newest model repos from major labs on HuggingFace (Meta, Mistral, Google, Qwen, DeepSeek, Z.ai, Moonshot...)."""
+    items: list[SignalItem] = []
+    with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+        for org in LAB_HF_ORGS:
+            try:
+                resp = client.get(
+                    "https://huggingface.co/api/models",
+                    params={"author": org, "sort": "createdAt", "direction": "-1", "limit": 5},
+                )
+                if resp.status_code != 200:
+                    continue
+                for m in resp.json():
+                    mid = m.get("id") or ""
+                    created = _parse_dt(m.get("createdAt"))
+                    if not mid or created is None:
+                        continue
+                    # Skip quantized/derivative repos: only primary releases.
+                    low = mid.lower()
+                    if any(x in low for x in ("-gguf", "-awq", "-gptq", "-fp8", "-int4", "-int8", "-mlx", "-bnb")):
+                        continue
+                    tags = ", ".join((m.get("tags") or [])[:8])
+                    items.append(
+                        SignalItem(
+                            id=f"lab-model:{mid}",
+                            source="lab-models",
+                            title=f"[{org}] New model repo: {mid}",
+                            url=f"https://huggingface.co/{mid}",
+                            body=f"New HuggingFace repo {mid} from {org}. Pipeline: {m.get('pipeline_tag')}. Tags: {tags}.",
+                            published_at=created,
+                            engagement=float(m.get("likes") or 0),
+                            metadata={"repo": f"HF {org}", "lab": org},
                         )
                     )
             except Exception:
