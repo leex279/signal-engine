@@ -241,6 +241,48 @@ def cmd_run(db_path: str, digest_dir: str) -> None:
         store.close()
 
 
+def cmd_measure_decision(db_path: str) -> None:
+    """Compare reading pass with Decision Pass OFF vs ON on the same code-filtered rows."""
+    store = SignalStore(db_path)
+    try:
+        all_items = store.get_all_items()
+        code_survivors = [
+            it
+            for it in all_items
+            if it.filtered_by is None or it.filtered_by == "decision_drop"
+        ]
+        decision_survivors = [it for it in all_items if it.filtered_by is None]
+        dropped_by_decision = [
+            it for it in all_items if it.filtered_by == "decision_drop"
+        ]
+
+        # Run 1: Decision pass OFF (pass all code survivors with high max_per_source)
+        md_off, stats_off = generate_digest(code_survivors)
+        # Run 2: Decision pass ON (pass only decision survivors)
+        md_on, stats_on = generate_digest(decision_survivors)
+
+        missed_by_drop = [
+            it.title
+            for it in dropped_by_decision
+            if it.url and it.url in md_off
+        ]
+        print(
+            f"Decision Pass OFF -> items_candidates={len(code_survivors)} (sent={stats_off['items_read']}) | "
+            f"tokens={stats_off['total_tokens']} | time={stats_off['elapsed_sec']}s"
+        )
+        print(
+            f"Decision Pass ON  -> items_candidates={len(decision_survivors)} (sent={stats_on['items_read']}) | "
+            f"tokens={stats_on['total_tokens']} | time={stats_on['elapsed_sec']}s"
+        )
+        print(
+            f"Items dropped by decision pass that LLM would have included: {len(missed_by_drop)}"
+        )
+        for m in missed_by_drop:
+            print(f"  - {m}")
+    finally:
+        store.close()
+
+
 def main() -> None:
     configure_utf8()
     load_dotenv()
@@ -265,6 +307,9 @@ def main() -> None:
     p5.add_argument("--db", default="data/test_pipeline.db", help="SQLite DB path")
     p5.add_argument("--out", default="digests", help="Digest output directory")
 
+    pm = sub.add_parser("measure-decision", help="Compare reading pass with and without decision pass")
+    pm.add_argument("--db", default="data/test_pipeline.db", help="SQLite DB path")
+
     prun = sub.add_parser("run", help="Run full daily pipeline")
     prun.add_argument("--db", default="data/signal.db", help="SQLite DB path")
     prun.add_argument("--out", default="digests", help="Digest output directory")
@@ -282,6 +327,8 @@ def main() -> None:
         cmd_stage4(args.db)
     elif args.cmd == "stage5":
         cmd_stage5(args.db, args.out)
+    elif args.cmd == "measure-decision":
+        cmd_measure_decision(args.db)
     elif args.cmd == "run":
         cmd_run(args.db, args.out)
 

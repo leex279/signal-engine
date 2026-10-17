@@ -40,10 +40,19 @@ Format:
 """
 
 
-def build_reading_payload(items: list[SignalItem], max_items: int = 45) -> list[dict[str, Any]]:
-    """Prepare compact item JSON for the reading pass (keeps first, then unsure by relevance)."""
+def build_reading_payload(
+    items: list[SignalItem],
+    max_items: int = 65,
+    max_per_source: int = 8,
+) -> list[dict[str, Any]]:
+    """Prepare compact item JSON for the reading pass (keeps first, capped per source so all sources are represented)."""
     payload: list[dict[str, Any]] = []
-    for it in items[:max_items]:
+    per_source_counts: dict[str, int] = {}
+    for it in items:
+        src_cnt = per_source_counts.get(it.source, 0)
+        if src_cnt >= max_per_source:
+            continue
+        per_source_counts[it.source] = src_cnt + 1
         dec = it.decision or {}
         payload.append(
             {
@@ -60,6 +69,8 @@ def build_reading_payload(items: list[SignalItem], max_items: int = 45) -> list[
                 "new_prob": dec.get("new", 0.5),
             }
         )
+        if len(payload) >= max_items:
+            break
     return payload
 
 

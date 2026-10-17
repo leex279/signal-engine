@@ -22,26 +22,27 @@ RELEVANCE_INSTRUCTIONS = (
 )
 
 RELEVANCE_CRITERIA = [
-    "Level 0: Unrelated to AI software engineering, coding agents, LLMs, browser automation, or programmatic video.",
-    "Level 1: General AI news, funding/valuation drama, policy/copyright debates, or consumer chat fluff that does not change how a builder works.",
-    "Level 2: Adjacent AI developer topic, beginner tutorial, or general discussion without immediate actionability.",
-    "Level 3: Concrete agent workflow, skill, MCP server, benchmark shift, or open-weight model release a builder can adopt or learn from.",
-    "Level 4: Direct release, changelog update, new feature, skill, or breaking change in core tools (Antigravity, Gemini, Claude Code, HyperFrames, OpenAI Codex, BrowserOS, MCP, Ollama).",
+    "Level 0: Unrelated to AI engineering, coding agents, LLMs, browser automation, or programmatic video; or general reaction/praise/complaint threads and end-user game/art showcases with no reusable developer tool or workflow.",
+    "Level 1: General AI news, funding/valuation drama, policy debates, subjective complaints ('X feels the same'), or vague praise ('Mind blown by X') that does not change how a builder works.",
+    "Level 2: Adjacent developer topic, beginner tutorial, or minor bugfix without actionable impact on my stack.",
+    "Level 3: Concrete agent workflow, harness integration (e.g. integrating Jev into Claude Code), benchmark tool (e.g. Llmspeed), skill, MCP server, or open-weight model release a builder can adopt.",
+    "Level 4: Direct release, changelog update, new feature, skill, or breaking change in core tools (Antigravity, Gemini CLI/API, Claude Code/API, HyperFrames, OpenAI Codex, BrowserOS, MCP, Ollama).",
 ]
 
 NEW_INSTRUCTIONS = (
-    "Does this item report something new and concrete (a release, changelog update, feature, "
-    "open-source repo/skill, measured benchmark, technical postmortem, or reproducible workflow)?"
+    "Does this item report something new, technical, and concrete for an AI developer (a release, "
+    "changelog update, feature, open-source tool/repo/skill, measured benchmark, or reproducible agent engineering workflow)?"
 )
 
 NEW_CRITERIA = {
     "true": (
-        "Announces or documents a concrete release, changelog entry, feature, tool/repo/skill, "
-        "measured benchmark result, technical architecture, or reproducible workflow."
+        "Announces or documents a concrete software release, changelog entry, feature, developer tool/repo/skill, "
+        "measured benchmark result, or reproducible agent engineering workflow."
     ),
     "false": (
-        "Opinion essay, hype/doomer thread ('AI will replace X'), beginner question, "
-        "customer support/billing/rate-limit complaint, meme, prompt pack, or unverified rumor."
+        "Opinion essay, vague praise ('Mind blown'), subjective complaint ('videos feel the same'), "
+        "end-user showcase without a reusable developer tool/repo, hype/doomer thread, beginner question, "
+        "billing/rate-limit complaint, or unverified rumor."
     ),
 }
 
@@ -179,7 +180,6 @@ async def _score_item_llm_fallback(
             "model": fallback_model,
         }
     except Exception as exc:
-        # Never drop on failure: send to reading pass as unsure
         return {
             "relevance": 0.5,
             "relevance_level": 2.0,
@@ -229,7 +229,7 @@ async def score_items_parallel(
     return list(results), elapsed
 
 
-# Interview Keep/Drop Benchmark Examples (Stage 4 verification set)
+# Interview + Live-Sorted Today Keep/Drop Benchmark Examples (Stage 4 verification set)
 INTERVIEW_EXAMPLES: list[tuple[str, SignalItem]] = [
     (
         "keep",
@@ -246,19 +246,39 @@ INTERVIEW_EXAMPLES: list[tuple[str, SignalItem]] = [
         SignalItem(
             id="ex:keep2",
             source="hyperframes",
-            title="HyperFrames: Add configurable encoder settings (crf, videoBitrate, hdrMode) to Studio Server render routes",
-            url="https://github.com/heygen-com/hyperframes/commit/abc1234",
-            body="Added configurable encoder parameters for Producer and Studio Server render routes, allowing fine-tuned control over crf, videoBitrate, videoFrameFormat, and hdrMode.",
+            title="HyperFrames v0.8.167 & feat(producer): distributed renders accept 25 fps and 720p/480p render routes",
+            url="https://github.com/heygen-com/hyperframes/releases/tag/v0.8.167",
+            body="Long projects preview more smoothly: preview work now follows what is playing, not total clip count. Producer supports distributed 25fps and 720p/480p renders.",
         ),
     ),
     (
         "keep",
         SignalItem(
             id="ex:keep3",
-            source="coleam00-skills",
-            title="coleam00/skills: Add build-signal-engine skill for personal AI news filtering and daily digests",
-            url="https://github.com/coleam00/skills/tree/main/.claude/skills/build-signal-engine",
-            body="New Claude Code skill that interviews the user, fetches changelogs and communities into SQLite, runs a typed decision pass, and generates a daily markdown digest.",
+            source="gemini-cli",
+            title="Gemini CLI v0.66.0-nightly.20261017: Add Banner about Gemini CLI not being optimized for Gemini 4",
+            url="https://github.com/google-gemini/gemini-cli/pull/29774",
+            body="Nightly release v0.66.0-nightly.20261017 adds notice regarding Gemini 4 optimization in Gemini CLI.",
+        ),
+    ),
+    (
+        "keep",
+        SignalItem(
+            id="ex:keep4",
+            source="reddit",
+            title="[r/ClaudeAI] I have put jev inside claude code's harness to reduce token maxing",
+            url="https://www.reddit.com/r/ClaudeAI/comments/jev_harness",
+            body="Built a hook/harness integration using TypeSafe's Jev decision model inside Claude Code to pre-filter context and tool outputs, cutting token usage significantly.",
+        ),
+    ),
+    (
+        "keep",
+        SignalItem(
+            id="ex:keep5",
+            source="hacker-news",
+            title="Show HN: Llmspeed – feel how fast a local LLM runs before you buy the hardware",
+            url="https://news.ycombinator.com/item?id=llmspeed",
+            body="Interactive benchmark tool showing token/s latency and throughput across GPUs and Apple Silicon for local open-weight LLMs.",
         ),
     ),
     (
@@ -266,19 +286,19 @@ INTERVIEW_EXAMPLES: list[tuple[str, SignalItem]] = [
         SignalItem(
             id="ex:drop1",
             source="reddit",
-            title="[r/singularity] Why AI will replace 90% of software engineers by next year (my thoughts)",
-            url="https://www.reddit.com/r/singularity/comments/xyz1",
-            body="I've been thinking a lot about how fast AI is moving and honestly I don't see why companies will hire junior or mid-level developers anymore. Here is my philosophical take.",
+            title="[r/ClaudeAI] Mind blown by Claude",
+            url="https://www.reddit.com/r/ClaudeAI/comments/mind_blown",
+            body="I just started using Claude this week and I am completely mind blown by how good it is compared to everything else!",
         ),
     ),
     (
         "drop",
         SignalItem(
             id="ex:drop2",
-            source="hacker-news",
-            title="AI Startup Raises $400M Series B at $4B Valuation Amid Investor Frenzy",
-            url="https://example.com/ai-funding-news",
-            body="Venture capital firms continue pouring billions into generative AI startups as valuations soar, according to people familiar with the matter.",
+            source="reddit",
+            title="[r/ClaudeAI] The new Opus generated videos all feel the same.",
+            url="https://www.reddit.com/r/ClaudeAI/comments/opus_videos",
+            body="Does anyone else feel like all the videos people are generating with Opus have the exact same style and pacing? Getting tired of seeing them.",
         ),
     ),
     (
@@ -286,9 +306,19 @@ INTERVIEW_EXAMPLES: list[tuple[str, SignalItem]] = [
         SignalItem(
             id="ex:drop3",
             source="reddit",
-            title="[r/ClaudeAI] Anyone else getting rate limited after 5 messages today?! Unusable!",
-            url="https://www.reddit.com/r/ClaudeAI/comments/xyz2",
-            body="I pay $20 a month for Pro and I keep hitting the usage limit after just a few chats. Customer support hasn't replied. Is anyone else cancelling their subscription?",
+            title="[r/ClaudeAI] I made my first game: A multiplayer RTS. Today is the 7th day working on it.",
+            url="https://www.reddit.com/r/ClaudeAI/comments/rts_game",
+            body="Here is a video of my multiplayer RTS game that I have been vibe coding for the past 7 days! Let me know what you think of the graphics.",
+        ),
+    ),
+    (
+        "drop",
+        SignalItem(
+            id="ex:drop4",
+            source="hacker-news",
+            title="AI Startup Raises $400M Series B at $4B Valuation Amid Investor Frenzy",
+            url="https://example.com/ai-funding-news",
+            body="Venture capital firms continue pouring billions into generative AI startups as valuations soar, according to people familiar with the matter.",
         ),
     ),
 ]

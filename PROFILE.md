@@ -47,15 +47,16 @@ Data platform: **Per-source native free APIs & feeds** (GitHub API, HN Algolia A
 Routing: **drop** when `relevance < 0.4` OR `new <= 0.1`; **keep** when `relevance >= 0.5` AND `new >= 0.6`; **unsure** for everything else (sent to the reading pass so nothing big is missed — R2.5).
 
 ### Keep examples
-- New Claude Code / Antigravity / Gemini CLI release, skill system update, MCP capability, or breaking API change.
-- HyperFrames (`heygen-com/hyperframes`) feature release, renderer/studio improvement, or new agent skill.
-- Concrete open-source agent architecture, skill repo (like `coleam00/skills`), or real model release/benchmark shift.
-- *(Note: per R2.3, we will also pull a live sample after Stage 2 for interactive keep/drop sorting.)*
+- `[claude-code]` v2.1.302 (`CLAUDE_CODE_AUTO_MODE_MODEL`) & v2.1.300 (`virtualText` prompt decorations).
+- `[hyperframes]` v0.8.167 smoother preview & `feat(producer)` distributed renders (25fps, 720p/480p render routes).
+- `[gemini-cli]` v0.66.0-nightly (Gemini 4 banner) & `[openai-codex]` rust-v0.164.0-alpha.3.
+- `[r/ClaudeAI]` "I have put jev inside claude code's harness to reduce token maxing" & `[hacker-news]` "Show HN: Llmspeed – feel how fast a local LLM runs before you buy the hardware".
 
 ### Drop examples
-- Generic AI hype/opinion essays and "AI will replace developers" debates.
-- Funding rounds, executive drama, valuation news, and legal/copyright speculation.
-- Low-effort prompt packs, beginner "how do I use ChatGPT" questions, and rate-limit/billing complaints.
+- `[r/ClaudeAI]` "Mind blown by Claude" (vague praise post with no concrete workflow or release).
+- `[r/ClaudeAI]` "The new Opus generated videos all feel the same" (subjective complaint/opinion thread).
+- `[r/ClaudeAI]` "I made my first game: A multiplayer RTS. Today is the 7th day working on it" (unrelated game showcase, not an agent/developer workflow or tool change).
+- Generic AI funding/valuation news, "AI will replace developers" debates, and rate-limit complaints.
 
 ## The digest
 
