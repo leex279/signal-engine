@@ -1,4 +1,4 @@
-"""Stage 3: Factual code filters (age, engagement floor, language, length)."""
+"""Stage 3: Factual code filters (age, per-subreddit/community engagement floor, language, length)."""
 
 from __future__ import annotations
 
@@ -12,11 +12,15 @@ from signal_engine.store import SignalStore
 COMMUNITY_SOURCES = {"hacker-news", "reddit"}
 CHANGELOG_SOURCES = {
     "claude-code",
+    "antigravity-cursor-browseros",
     "gemini-cli",
     "hyperframes",
     "openai-codex",
     "coleam00-skills",
+    "video-toolchain",
     "ollama",
+    "github-viral-repos",
+    "model-radar",
 }
 
 
@@ -27,7 +31,6 @@ def is_mostly_english(text: str) -> bool:
     non_space = [ch for ch in text if not ch.isspace()]
     if not non_space:
         return True
-    # Count CJK, Cyrillic, Arabic, Hangul characters
     non_latin = sum(
         1
         for ch in non_space
@@ -62,7 +65,7 @@ def run_code_filters(
         if item.published_at is not None:
             cutoff = (
                 changelog_cutoff
-                if item.source in CHANGELOG_SOURCES
+                if item.source in CHANGELOG_SOURCES or item.source == "youtube-creators"
                 else community_cutoff
             )
             if item.published_at < cutoff:
@@ -70,16 +73,27 @@ def run_code_filters(
                 counts["dropped_age"] += 1
                 continue
         else:
-            # Undated changelog items from deep down a file are historical
             if item.source in CHANGELOG_SOURCES:
                 store.mark_filtered(item.id, "age_undated")
                 counts["dropped_age"] += 1
                 continue
 
-        # 2. Engagement floor for community sources
-        if item.source in COMMUNITY_SOURCES:
+        # 2. Engagement floor for community sources (HN points >= 15; Reddit top 60% percentile of each sub)
+        if item.source == "hacker-news":
             eng = item.engagement if item.engagement is not None else 0.0
             if eng < min_community_engagement:
+                store.mark_filtered(item.id, "engagement_floor")
+                counts["dropped_engagement"] += 1
+                continue
+        elif item.source == "reddit":
+            sub_pct = (item.metadata or {}).get("sub_percentile")
+            eng = item.engagement if item.engagement is not None else 0.0
+            if sub_pct is not None:
+                if float(sub_pct) < 0.35:
+                    store.mark_filtered(item.id, "engagement_floor")
+                    counts["dropped_engagement"] += 1
+                    continue
+            elif eng < min_community_engagement:
                 store.mark_filtered(item.id, "engagement_floor")
                 counts["dropped_engagement"] += 1
                 continue

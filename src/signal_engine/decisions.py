@@ -1,4 +1,4 @@
-"""Stage 4: The Decision Pass (TypeSafe Jev via OpenRouter with structured LLM fallback)."""
+"""Stage 4: The Decision Pass (TypeSafe Jev via OpenRouter with 3 questions including video_candidate)."""
 
 from __future__ import annotations
 
@@ -13,38 +13,51 @@ import httpx
 from signal_engine.models import SignalItem
 
 RELEVANCE_INSTRUCTIONS = (
-    "How relevant is this item to an AI engineer who builds with coding agents, skills, "
-    "workflows, browser automation, and programmatic video (specifically Google Antigravity, "
-    "Gemini CLI/API, Anthropic Claude Code/API, HeyGen HyperFrames, OpenAI Codex/Cursor, "
-    "BrowserOS/MCP servers, and local LLMs like Ollama)? "
+    "How relevant is this item to an AI engineer and YouTube creator (DIY Smart Code) who builds with "
+    "coding agents, skills, workflows, browser automation, TTS/audio, and programmatic video "
+    "(specifically Google Antigravity, Gemini CLI/API/Gemma, Anthropic Claude Code/API, HeyGen HyperFrames, "
+    "OpenAI Codex, Cursor, BrowserOS, MCP servers, ElevenLabs, GSAP, n8n, and local LLMs on Ollama/llama.cpp/ROCm)? "
     "Note: an unfamiliar new product, repo, or model name is NOT a reason to score lower "
     "if it solves one of these problems."
 )
 
 RELEVANCE_CRITERIA = [
-    "Level 0: Unrelated to AI engineering, coding agents, LLMs, browser automation, or programmatic video; or general reaction/praise/complaint threads and end-user game/art showcases with no reusable developer tool or workflow.",
+    "Level 0: Unrelated to AI engineering, coding agents, LLMs, browser automation, TTS, or programmatic video; or general reaction/praise/complaint threads and end-user game/art showcases with no reusable developer tool or workflow.",
     "Level 1: General AI news, funding/valuation drama, policy debates, subjective complaints ('X feels the same'), or vague praise ('Mind blown by X') that does not change how a builder works.",
-    "Level 2: Adjacent developer topic, beginner tutorial, or minor bugfix without actionable impact on my stack.",
-    "Level 3: Concrete agent workflow, harness integration (e.g. integrating Jev into Claude Code), benchmark tool (e.g. Llmspeed), skill, MCP server, or open-weight model release a builder can adopt.",
-    "Level 4: Direct release, changelog update, new feature, skill, or breaking change in core tools (Antigravity, Gemini CLI/API, Claude Code/API, HyperFrames, OpenAI Codex, BrowserOS, MCP, Ollama).",
+    "Level 2: Adjacent developer topic, beginner tutorial, or minor internal refactor without actionable impact on my stack or videos.",
+    "Level 3: Concrete agent workflow, harness integration (e.g. integrating Jev into Claude Code), benchmark tool (e.g. Llmspeed), skill, MCP server, or open-weight model release (Gemma, Qwen, GLM, Kimi, DeepSeek) a builder can adopt.",
+    "Level 4: Direct release, changelog update, new flag/env-var, skill, outage/limit change, or breaking change in core tools (Antigravity, Gemini CLI/API, Claude Code/API, HyperFrames, OpenAI Codex, Cursor, BrowserOS, MCP, ElevenLabs, GSAP, Ollama/llama.cpp).",
 ]
 
 NEW_INSTRUCTIONS = (
     "Does this item report something new, technical, and concrete for an AI developer (a release, "
-    "changelog update, feature, open-source tool/repo/skill, measured benchmark, or reproducible agent engineering workflow)?"
+    "changelog update, feature, open-source tool/repo/skill, measured benchmark, outage/limit change, or reproducible agent engineering workflow)?"
 )
 
 NEW_CRITERIA = {
     "true": (
         "Announces or documents a concrete software release, changelog entry, feature, developer tool/repo/skill, "
-        "measured benchmark result, or reproducible agent engineering workflow."
+        "measured benchmark result, model launch, or reproducible agent engineering workflow."
     ),
     "false": (
         "Opinion essay, vague praise ('Mind blown'), subjective complaint ('videos feel the same'), "
         "end-user showcase without a reusable developer tool/repo, hype/doomer thread, beginner question, "
-        "billing/rate-limit complaint, or unverified rumor."
+        "or unverified rumor."
     ),
 }
+
+VIDEO_CANDIDATE_INSTRUCTIONS = (
+    "Could this item be a strong YouTube Short or Long video topic for 'DIY Smart Code' "
+    "(which covers hidden Claude Code / Gemini / agent flags & tricks, cost/usage-limit survival tactics, "
+    "two-camp tool debates like X vs Y, viral agent skills/repos, and local LLM hardware reality checks)?"
+)
+
+VIDEO_CANDIDATE_CRITERIA = [
+    "Level 0: Not a video topic (internal patch, minor bugfix, or generic industry news).",
+    "Level 1: Minor update or background item — useful for my own repo maintenance, not a standalone video.",
+    "Level 2: Solid standalone Short or Long video topic — a new model release, viral agent repo/skill, or notable workflow change viewers can run.",
+    "Level 3: High-conviction video hit — reveals a hidden CLI flag/env-var/hook trick not widely known, a cost/usage-limit/loss angle, a sharp X vs Y debate angle, or a local GPU/hardware benchmark.",
+]
 
 
 def route_decision(relevance: float, new_prob: float) -> str:
@@ -72,7 +85,7 @@ async def _score_item_jev(
     item: SignalItem,
     model: str = "typesafe/jev-1.13",
 ) -> dict[str, Any] | None:
-    """Call TypeSafe Jev on OpenRouter `/api/alpha/decisions`."""
+    """Call TypeSafe Jev on OpenRouter `/api/alpha/decisions` with all 3 questions."""
     payload = {
         "model": model,
         "state": _format_item_state(item),
@@ -87,6 +100,11 @@ async def _score_item_jev(
                 "instructions": NEW_INSTRUCTIONS,
                 "criteria": NEW_CRITERIA,
             },
+            "video_candidate": {
+                "type": "score",
+                "instructions": VIDEO_CANDIDATE_INSTRUCTIONS,
+                "criteria": VIDEO_CANDIDATE_CRITERIA,
+            },
         },
     }
     headers = {
@@ -99,21 +117,26 @@ async def _score_item_jev(
                 "https://openrouter.ai/api/alpha/decisions",
                 json=payload,
                 headers=headers,
-                timeout=4.0,
+                timeout=5.0,
             )
             if resp.status_code == 200:
                 data = resp.json()
                 answers = data.get("answers") or {}
                 rel_obj = answers.get("relevance") or {}
                 new_obj = answers.get("new") or {}
+                vid_obj = answers.get("video_candidate") or {}
                 raw_score = float(rel_obj.get("score", 2.0))
                 relevance = max(0.0, min(1.0, raw_score / (len(RELEVANCE_CRITERIA) - 1)))
                 new_prob = float(new_obj.get("noul", 0.5))
+                vid_level = float(vid_obj.get("score", 1.0))
+                vid_score = max(0.0, min(1.0, vid_level / (len(VIDEO_CANDIDATE_CRITERIA) - 1)))
                 route = route_decision(relevance, new_prob)
                 return {
                     "relevance": round(relevance, 3),
                     "relevance_level": round(raw_score, 2),
                     "new": round(new_prob, 3),
+                    "video_score": round(vid_score, 3),
+                    "video_level": round(vid_level, 2),
                     "route": route,
                     "model": model,
                 }
@@ -137,13 +160,15 @@ async def _score_item_llm_fallback(
 ) -> dict[str, Any]:
     """Structured JSON fallback on OpenRouter `/api/v1/chat/completions` if Jev endpoint is unavailable."""
     system_prompt = (
-        "You are a fast, calibrated decision classifier. Answer two independent questions about the item "
-        "and return ONLY valid JSON: {\"relevance_level\": <float 0.0 to 4.0>, \"new_prob\": <float 0.0 to 1.0>}.\n\n"
+        "You are a fast, calibrated decision classifier. Answer three independent questions about the item "
+        "and return ONLY valid JSON: {\"relevance_level\": <float 0.0 to 4.0>, \"new_prob\": <float 0.0 to 1.0>, \"video_level\": <float 0.0 to 3.0>}.\n\n"
         f"Question 1 (relevance_level 0..4): {RELEVANCE_INSTRUCTIONS}\n"
         + "\n".join(RELEVANCE_CRITERIA)
         + f"\n\nQuestion 2 (new_prob 0..1): {NEW_INSTRUCTIONS}\n"
         f"- 1.0 (true): {NEW_CRITERIA['true']}\n"
-        f"- 0.0 (false): {NEW_CRITERIA['false']}"
+        f"- 0.0 (false): {NEW_CRITERIA['false']}\n\n"
+        f"Question 3 (video_level 0..3): {VIDEO_CANDIDATE_INSTRUCTIONS}\n"
+        + "\n".join(VIDEO_CANDIDATE_CRITERIA)
     )
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -171,11 +196,15 @@ async def _score_item_llm_fallback(
         raw_level = float(parsed.get("relevance_level", 2.0))
         relevance = max(0.0, min(1.0, raw_level / 4.0))
         new_prob = max(0.0, min(1.0, float(parsed.get("new_prob", 0.5))))
+        vid_level = max(0.0, min(3.0, float(parsed.get("video_level", 1.0))))
+        vid_score = vid_level / 3.0
         route = route_decision(relevance, new_prob)
         return {
             "relevance": round(relevance, 3),
             "relevance_level": round(raw_level, 2),
             "new": round(new_prob, 3),
+            "video_score": round(vid_score, 3),
+            "video_level": round(vid_level, 2),
             "route": route,
             "model": fallback_model,
         }
@@ -184,6 +213,8 @@ async def _score_item_llm_fallback(
             "relevance": 0.5,
             "relevance_level": 2.0,
             "new": 0.5,
+            "video_score": 0.33,
+            "video_level": 1.0,
             "route": "unsure",
             "model": "fallback-error",
             "error": str(exc)[:120],
