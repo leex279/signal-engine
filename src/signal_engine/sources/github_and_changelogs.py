@@ -1,10 +1,11 @@
-"""GitHub Releases, Commits, and Markdown Changelog splitters."""
+"""GitHub Releases, Commits, and Markdown/HTML Changelog splitters."""
 
 from __future__ import annotations
 
 import os
 import re
 from datetime import datetime, timezone
+from bs4 import BeautifulSoup
 from dateutil import parser as date_parser
 import httpx
 
@@ -35,7 +36,13 @@ def extract_first_sentence(text: str) -> str:
         lower = line.lower()
         if any(
             skip in lower
-            for skip in ("choose a tag", "subscribe", "full changelog", "what's changed")
+            for skip in (
+                "choose a tag",
+                "subscribe",
+                "full changelog",
+                "what's changed",
+                "new contributors",
+            )
         ):
             continue
         if len(line.split()) < 4:
@@ -92,6 +99,57 @@ def fetch_github_releases(
                     "tag": tag,
                     "prerelease": bool(rel.get("prerelease")),
                 },
+            )
+        )
+    return items
+
+
+def fetch_github_commits(
+    source_name: str,
+    owner_repo: str,
+    label: str,
+    per_page: int = 15,
+) -> list[SignalItem]:
+    """Fetch recent commits from GitHub Commits API for repos that ship via main branch."""
+    url = f"https://api.github.com/repos/{owner_repo}/commits"
+    items: list[SignalItem] = []
+    with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+        resp = client.get(url, params={"per_page": per_page}, headers=_github_headers())
+        resp.raise_for_status()
+        commits = resp.json()
+
+    for c in commits:
+        sha = (c.get("sha") or "")[:12]
+        commit_obj = c.get("commit") or {}
+        message = (commit_obj.get("message") or "").strip()
+        if not message:
+            continue
+        lines = message.splitlines()
+        headline = lines[0].strip()
+        # Skip trivial merge commits
+        if headline.lower().startswith("merge pull request") and len(lines) > 1:
+            headline = next((ln.strip() for ln in lines[1:] if ln.strip()), headline)
+
+        author_info = commit_obj.get("committer") or commit_obj.get("author") or {}
+        pub_str = author_info.get("date")
+        pub_dt = None
+        if pub_str:
+            try:
+                pub_dt = date_parser.isoparse(pub_str).astimezone(timezone.utc)
+            except Exception:
+                pub_dt = None
+
+        html_url = c.get("html_url") or f"https://github.com/{owner_repo}/commit/{sha}"
+        items.append(
+            SignalItem(
+                id=f"gh-commit:{owner_repo}:{sha}",
+                source=source_name,
+                title=f"{label} ({sha[:7]}): {headline}",
+                url=html_url,
+                body=message[:4000],
+                published_at=pub_dt,
+                engagement=None,
+                metadata={"repo": owner_repo, "sha": sha},
             )
         )
     return items
@@ -175,8 +233,18 @@ def _parse_date_from_heading(heading: str) -> datetime | None:
     return None
 
 
+def _dedupe(items: list[SignalItem]) -> list[SignalItem]:
+    seen: set[str] = set()
+    out: list[SignalItem] = []
+    for it in items:
+        if it.id not in seen:
+            seen.add(it.id)
+            out.append(it)
+    return out
+
+
 def fetch_claude_code() -> list[SignalItem]:
-    """Stage 1 source: Anthropic Claude Code releases + raw CHANGELOG.md."""
+    """Anthropic Claude Code releases + raw CHANGELOG.md."""
     items: list[SignalItem] = []
     try:
         items.extend(
@@ -204,7 +272,6 @@ def fetch_claude_code() -> list[SignalItem]:
                     markdown_text=resp.text,
                     max_entries=15,
                 )
-                # If CHANGELOG.md entries don't carry dates in headings, assign recent commit timestamp to latest entries
                 if entries and all(e.published_at is None for e in entries):
                     now = datetime.now(timezone.utc)
                     for i, entry in enumerate(entries):
@@ -213,12 +280,128 @@ def fetch_claude_code() -> list[SignalItem]:
                 items.extend(entries)
     except Exception:
         pass
+    return _dedupe(items)
 
-    # Deduplicate in-memory by id
-    seen: set[str] = set()
-    deduped: list[SignalItem] = []
-    for it in items:
-        if it.id not in seen:
-            seen.add(it.id)
-            deduped.append(it)
-    return deduped
+
+def fetch_gemini_cli() -> list[SignalItem]:
+    """Google Gemini CLI releases."""
+    return _dedupe(
+        fetch_github_releases(
+            source_name="gemini-cli",
+            owner_repo="google-gemini/gemini-cli",
+            label="Gemini CLI",
+            per_page=15,
+        )
+    )
+
+
+def fetch_hyperframes() -> list[SignalItem]:
+    """HeyGen HyperFrames releases, commits, and Mintlify changelog."""
+    items: list[SignalItem] = []
+    try:
+        rels = fetch_github_releases(
+            source_name="hyperframes",
+            owner_repo="heygen-com/hyperframes",
+            label="HyperFrames",
+            per_page=10,
+        )
+        items.extend(rels)
+    except Exception:
+        pass
+
+    try:
+        commits = fetch_github_commits(
+            source_name="hyperframes",
+            owner_repo="heygen-com/hyperframes",
+            label="HyperFrames",
+            per_page=15,
+        )
+        items.extend(commits)
+    except Exception:
+        pass
+
+    # Also check Mintlify changelog (.md or HTML)
+    for url in (
+        "https://hyperframes.mintlify.app/changelog.md",
+        "https://hyperframes.mintlify.app/changelog",
+    ):
+        try:
+            with httpx.Client(timeout=15.0, follow_redirects=True) as client:
+                resp = client.get(url, headers={"User-Agent": "signal-engine/0.1.0"})
+                if resp.status_code != 200 or not resp.text:
+                    continue
+                if url.endswith(".md") or resp.text.lstrip().startswith("#"):
+                    entries = split_markdown_changelog(
+                        source_name="hyperframes",
+                        page_url="https://hyperframes.mintlify.app/changelog",
+                        human_url="https://hyperframes.mintlify.app/changelog",
+                        label="HyperFrames Changelog",
+                        markdown_text=resp.text,
+                        max_entries=10,
+                    )
+                    if entries:
+                        items.extend(entries)
+                        break
+                else:
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    text_lines: list[str] = []
+                    for el in soup.find_all(["h1", "h2", "h3", "p", "li"]):
+                        tag_name = el.name or ""
+                        txt = el.get_text(" ", strip=True)
+                        if not txt:
+                            continue
+                        if tag_name in ("h1", "h2", "h3"):
+                            text_lines.append(f"\n## {txt}\n")
+                        else:
+                            text_lines.append(f"- {txt}")
+                    entries = split_markdown_changelog(
+                        source_name="hyperframes",
+                        page_url="https://hyperframes.mintlify.app/changelog",
+                        human_url="https://hyperframes.mintlify.app/changelog",
+                        label="HyperFrames Changelog",
+                        markdown_text="\n".join(text_lines),
+                        max_entries=10,
+                    )
+                    if entries:
+                        items.extend(entries)
+                        break
+        except Exception:
+            pass
+
+    return _dedupe(items)
+
+
+def fetch_openai_codex() -> list[SignalItem]:
+    """OpenAI Codex CLI releases."""
+    return _dedupe(
+        fetch_github_releases(
+            source_name="openai-codex",
+            owner_repo="openai/codex",
+            label="OpenAI Codex",
+            per_page=15,
+        )
+    )
+
+
+def fetch_coleam00_skills() -> list[SignalItem]:
+    """Cole Medin's skills repo commits."""
+    return _dedupe(
+        fetch_github_commits(
+            source_name="coleam00-skills",
+            owner_repo="coleam00/skills",
+            label="coleam00/skills",
+            per_page=15,
+        )
+    )
+
+
+def fetch_ollama() -> list[SignalItem]:
+    """Ollama releases."""
+    return _dedupe(
+        fetch_github_releases(
+            source_name="ollama",
+            owner_repo="ollama/ollama",
+            label="Ollama",
+            per_page=15,
+        )
+    )
