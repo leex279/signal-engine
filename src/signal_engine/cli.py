@@ -194,6 +194,10 @@ def cmd_run(db_path: str, digest_dir: str) -> None:
             total_new += n_cnt
             source_stats[name] = {"fetched": f_cnt, "new": n_cnt}
 
+        source_warnings = [name for name, st in source_stats.items() if st["fetched"] == 0]
+        if source_warnings:
+            print(f"WARNING: sources returned 0 items: {', '.join(source_warnings)}")
+
         filter_stats = run_code_filters(store)
         surviving = store.get_unfiltered_items()
 
@@ -226,6 +230,7 @@ def cmd_run(db_path: str, digest_dir: str) -> None:
             "decision_elapsed_sec": round(dec_elapsed, 2),
             "wall_time_sec": round(time.perf_counter() - t0, 2),
             "sources": source_stats,
+            "source_warnings": source_warnings,
             "filters": filter_stats,
         }
         out_path = write_digest_file(md_text, full_stats, digest_dir=digest_dir, digest_date=date_str)

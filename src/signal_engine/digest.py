@@ -288,6 +288,12 @@ def write_digest_file(
         f"Tokens: {stats.get('total_tokens', '?')} | "
         f"Reading time: {stats.get('elapsed_sec', '?')}s*\n"
     )
+    warnings = stats.get("source_warnings") or []
+    if warnings:
+        footer += (
+            f"\n> **Source health:** {', '.join(warnings)} returned 0 items this run "
+            "(fetch failure, not 'no news').\n"
+        )
     full_text = markdown_content.rstrip() + footer
     out_path.write_text(full_text, encoding="utf-8")
 

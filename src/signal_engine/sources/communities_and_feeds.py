@@ -368,8 +368,17 @@ def fetch_youtube_creators() -> list[SignalItem]:
         for creator, channel_id, is_competitor in channels:
             feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
             try:
-                resp = client.get(feed_url, headers=headers)
-                if resp.status_code != 200:
+                resp = None
+                for attempt in range(3):
+                    try:
+                        resp = client.get(feed_url, headers=headers)
+                        if resp.status_code == 200:
+                            break
+                    except httpx.HTTPError:
+                        resp = None
+                    time.sleep(1.5 * (attempt + 1))
+                if resp is None or resp.status_code != 200:
+                    print(f"[youtube-creators] {creator}: feed failed ({resp.status_code if resp is not None else 'no response'})")
                     continue
                 parsed = feedparser.parse(resp.text)
                 for entry in parsed.entries[:6]:
