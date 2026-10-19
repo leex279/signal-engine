@@ -14,19 +14,19 @@ from signal_engine.models import SignalItem
 
 RELEVANCE_INSTRUCTIONS = (
     "How relevant is this item to an AI engineer and YouTube creator (DIY Smart Code) who builds with "
-    "coding agents, skills, workflows, browser automation, TTS/audio, and programmatic video "
+    "coding agents, skills, workflows, browser automation, TTS/audio, programmatic video, and AMD GPU/ROCm hardware "
     "(specifically Google Antigravity, Gemini CLI/API/Gemma, Anthropic Claude Code/API, HeyGen HyperFrames, "
-    "OpenAI Codex, Cursor, BrowserOS, MCP servers, ElevenLabs, GSAP, n8n, and local LLMs on Ollama/llama.cpp/ROCm)? "
+    "OpenAI Codex, Cursor, BrowserOS, MCP servers, ElevenLabs, GSAP, n8n, AMD Radeon/Instinct/ROCm/AI compute, and local LLMs on Ollama/llama.cpp)? "
     "Note: an unfamiliar new product, repo, or model name is NOT a reason to score lower "
     "if it solves one of these problems."
 )
 
 RELEVANCE_CRITERIA = [
-    "Level 0: Unrelated to AI engineering, coding agents, LLMs, browser automation, TTS, or programmatic video; or general reaction/praise/complaint threads and end-user game/art showcases with no reusable developer tool or workflow.",
-    "Level 1: General AI news, funding/valuation drama, policy debates, subjective complaints ('X feels the same'), or vague praise ('Mind blown by X') that does not change how a builder works.",
+    "Level 0: Unrelated to AI engineering, coding agents, LLMs, browser automation, TTS, programmatic video, or AMD AI/GPU hardware; or general reaction/praise/complaint threads and end-user showcases with no reusable developer tool or workflow.",
+    "Level 1: General AI news, financial earnings/stock notices, funding/valuation drama, policy debates, subjective complaints ('X feels the same'), or vague praise ('Mind blown by X') that does not change how a builder works.",
     "Level 2: Adjacent developer topic, beginner tutorial, or minor internal refactor without actionable impact on my stack or videos.",
-    "Level 3: Concrete agent workflow, harness integration (e.g. integrating Jev into Claude Code), benchmark tool (e.g. Llmspeed), skill, MCP server, or open-weight model release (Gemma, Qwen, GLM, Kimi, DeepSeek) a builder can adopt.",
-    "Level 4: Direct release, changelog update, new flag/env-var, skill, outage/limit change, or breaking change in core tools (Antigravity, Gemini CLI/API, Claude Code/API, HyperFrames, OpenAI Codex, Cursor, BrowserOS, MCP, ElevenLabs, GSAP, Ollama/llama.cpp).",
+    "Level 3: Concrete agent workflow, harness integration (e.g. integrating Jev into Claude Code), benchmark tool (e.g. Llmspeed), skill, MCP server, AMD AI/ROCm/GPU architecture or compute update, or open-weight model release (Gemma, Qwen, GLM, Kimi, DeepSeek) a builder can adopt.",
+    "Level 4: Direct release, changelog update, new flag/env-var, skill, outage/limit change, or breaking change in core tools (Antigravity, Gemini CLI/API, Claude Code/API, HyperFrames, OpenAI Codex, Cursor, BrowserOS, MCP, ElevenLabs, GSAP, AMD ROCm/Radeon/AI, Ollama/llama.cpp).",
 ]
 
 NEW_INSTRUCTIONS = (

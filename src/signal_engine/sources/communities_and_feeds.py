@@ -60,11 +60,12 @@ def fetch_official_blogs() -> list[SignalItem]:
             "Ollama Blog",
             "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_ollama.xml",
         ),
+        ("AMD Newsroom", "https://newsroom.amd.com/rss.xml"),
         ("Simon Willison", "https://simonwillison.net/atom/everything/"),
         ("YouTube Official Blog", "https://blog.youtube/rss/"),
     ]
     items: list[SignalItem] = []
-    headers = {"User-Agent": "signal-engine/0.2.0"}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) signal-engine/0.2.0"}
 
     with httpx.Client(timeout=20.0, follow_redirects=True) as client:
         for label, feed_url in feeds:

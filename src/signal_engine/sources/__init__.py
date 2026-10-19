@@ -36,7 +36,7 @@ ALL_SOURCES: list[tuple[str, str, Callable[[], list[SignalItem]]]] = [
     ("ollama", "Ollama + llama.cpp/whisper.cpp (ROCm/Vulkan/Models)", fetch_ollama),
     ("github-viral-repos", "GitHub Search API (viral new agent/MCP/LLM repos)", fetch_github_viral_repos),
     ("model-radar", "OpenRouter Models diff + HuggingFace Trending API", fetch_model_radar),
-    ("official-blogs", "Anthropic Eng + Claude + OpenAI Dev + Willison + YT Blog", fetch_official_blogs),
+    ("official-blogs", "Anthropic Eng + Claude + OpenAI Dev + AMD Newsroom + Willison + YT Blog", fetch_official_blogs),
     ("claude-apps", "Claude desktop / Cowork / Chrome / plans release notes", fetch_claude_apps),
     ("lab-models", "New model repos from Meta, Mistral, Google, Qwen, DeepSeek, Z.ai, Moonshot...", fetch_lab_models),
     ("hacker-news", "HN Algolia API (9 AI/agent/tool queries)", fetch_hacker_news),
