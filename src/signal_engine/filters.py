@@ -23,6 +23,7 @@ CHANGELOG_SOURCES = {
     "model-radar",
     "claude-apps",
     "lab-models",
+    "arxiv-cs",
 }
 
 

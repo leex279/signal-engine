@@ -351,6 +351,7 @@ def fetch_youtube_creators() -> list[SignalItem]:
         ("InsiderForce", "UC8L6EV01fAJ2A0sDpsQ-T5g", True),
         ("Cole Medin", "UCMwVTLZIRRUyyVrkjDpn4pA", False),
         ("Simon Scrapes", "UCdCR4-uYOg5ju-IUuDnfnQA", False),
+        ("The Morpheus", "UCkZ3fSYruC0IXv6p34BHciQ", False),
         ("IndyDevDan", "UC_x36zCEGilGpB1m-V4gmjg", False),
         ("AI Explained", "UCNJ1Ymd5yFuUPtn21xtRbbw", False),
         ("Anthropic", "UCrDwWp7EBBv4NwvScIpBDOA", False),
@@ -521,3 +522,87 @@ def fetch_lab_models() -> list[SignalItem]:
             except Exception:
                 continue
     return items
+
+
+ARXIV_HIGH_SIGNAL_RE = re.compile(
+    r"\b(mcp|model context protocol|coding agent\w*|claude|gemini|openai|tool[- ]use|tool[- ]calling|"
+    r"subagent\w*|multi[- ]agent\w*|agentic|code generation|software engineering|quantiz\w*|"
+    r"kv[- ]cache|speculative decoding|mixture[- ]of[- ]experts|moe|context[- ]window|"
+    r"context[- ]compression|prompt[- ]caching|test[- ]time compute|small language model\w*|"
+    r"open[- ]weight\w*|benchmark\w*|hallucinat\w*)\b",
+    re.IGNORECASE,
+)
+
+
+def fetch_arxiv_cs(max_papers: int = 25) -> list[SignalItem]:
+    """Fetch daily new CS submissions from https://arxiv.org/list/cs/new (via rss.arxiv.org/rss/cs),
+    keep announce_type=='new', and pre-select the top `max_papers` matching agent/LLM/coding topics.
+    """
+    feed_url = "https://rss.arxiv.org/rss/cs"
+    scored_candidates: list[tuple[int, SignalItem]] = []
+    now = datetime.now(timezone.utc)
+
+    try:
+        with httpx.Client(timeout=25.0, follow_redirects=True) as client:
+            resp = client.get(
+                feed_url,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) signal-engine/0.2.0"},
+            )
+            if resp.status_code != 200 or not resp.text:
+                return []
+            parsed = feedparser.parse(resp.text)
+
+        for entry in parsed.entries:
+            announce_type = getattr(entry, "arxiv_announce_type", "new")
+            if announce_type != "new":
+                continue
+
+            raw_id = (entry.get("id") or entry.get("link") or "").strip()
+            title = re.sub(r"\s+", " ", (entry.get("title") or "").strip())
+            link = (entry.get("link") or "").strip()
+            if not raw_id or not title or not link:
+                continue
+
+            abstract = _strip_html(entry.get("summary") or entry.get("description") or "")
+            abstract = re.sub(r"^arXiv:\S+\s+Announce Type:\s*\w+\s*Abstract:\s*", "", abstract).strip()
+
+            combined = f"{title} {abstract}"
+            matches = ARXIV_HIGH_SIGNAL_RE.findall(combined)
+            if not matches:
+                continue
+
+            # Weight title matches 3x higher than abstract matches
+            title_matches = ARXIV_HIGH_SIGNAL_RE.findall(title)
+            distinct_terms = {m.lower() for m in matches}
+            hit_score = len(distinct_terms) * 2 + len(title_matches) * 3
+
+            arxiv_id = raw_id.split(":")[-1] if ":" in raw_id else raw_id.split("/")[-1]
+            categories = [t.get("term") for t in (entry.get("tags") or []) if isinstance(t, dict) and t.get("term")]
+            pub_dt = _parse_dt(entry.get("published") or entry.get("updated")) or now
+
+            scored_candidates.append(
+                (
+                    hit_score,
+                    SignalItem(
+                        id=f"arxiv:{arxiv_id}",
+                        source="arxiv-cs",
+                        title=f"[arXiv cs/new] {title}",
+                        url=link,
+                        body=f"Categories: {', '.join(categories)}\nAbstract: {abstract[:2800]}",
+                        published_at=pub_dt,
+                        engagement=float(hit_score),
+                        metadata={
+                            "arxiv_id": arxiv_id,
+                            "categories": categories,
+                            "matched_terms": sorted(distinct_terms),
+                            "repo": "arXiv cs/new",
+                        },
+                    ),
+                )
+            )
+    except Exception:
+        return []
+
+    scored_candidates.sort(key=lambda pair: pair[0], reverse=True)
+    return [item for _, item in scored_candidates[:max_papers]]
+

@@ -16,6 +16,7 @@ from signal_engine.sources.github_and_changelogs import (
     fetch_video_toolchain,
 )
 from signal_engine.sources.communities_and_feeds import (
+    fetch_arxiv_cs,
     fetch_claude_apps,
     fetch_hacker_news,
     fetch_lab_models,
@@ -39,6 +40,7 @@ ALL_SOURCES: list[tuple[str, str, Callable[[], list[SignalItem]]]] = [
     ("official-blogs", "Anthropic Eng + Claude + OpenAI Dev + AMD Newsroom + Willison + YT Blog", fetch_official_blogs),
     ("claude-apps", "Claude desktop / Cowork / Chrome / plans release notes", fetch_claude_apps),
     ("lab-models", "New model repos from Meta, Mistral, Google, Qwen, DeepSeek, Z.ai, Moonshot...", fetch_lab_models),
+    ("arxiv-cs", "arXiv cs/new RSS (top 25 new agent/LLM/MCP/code papers)", fetch_arxiv_cs),
     ("hacker-news", "HN Algolia API (9 AI/agent/tool queries)", fetch_hacker_news),
     ("reddit", "10 Subreddits top-of-day RSS with spacing", fetch_reddit),
     ("youtube-creators", "13 YouTube channels (Competitors, Creators, 1st-Party)", fetch_youtube_creators),
